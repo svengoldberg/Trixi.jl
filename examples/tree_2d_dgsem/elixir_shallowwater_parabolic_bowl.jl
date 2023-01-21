@@ -8,6 +8,19 @@ using Trixi
 equations = ShallowWaterEquations2D(gravity_constant=9.81)
 cfl = 0.1
 
+#= 
+  IDEA TO GET AROUND NOT ACHIEVING ref lvl 7: use AMR; current problem: It looks like that AMR destroys bottom topography
+    and with that also the water height. Even after one time step the bottom looks different
+    When this idea should be followed, I have to change the interpolation of b in the coarsening/refining to set to initial value at x
+    Problem: Getting the initial condition within there, requires a lot of adjustment to existing code and adding new parameter
+    only for that special case.
+  Current ref methoded used: "Inverse IndicatorHennemannGassner", that means indicator giving 0 returns 1 and the other way round
+  Why? To guarantee that there are not too much cells
+    => Only the important (wet) cells are refined and the other ones are coarsend or nothing happens
+=#
+
+# Best run until now: CFL=0.1, LGL=6, RefLvl=6, alpha_max=0.6 (around 25 minutes)
+
 # Implemented based on Wintermeyer (scaled on half of domain)
 function parabolic_bowl_analytic_2D_H(gravity, x,t)
   a = 1
@@ -93,6 +106,26 @@ save_solution = SaveSolutionCallback(interval=1000,
                                      save_initial_solution=true,
                                      save_final_solution=true)
 
+# Enabling AMR
+# Look out for "bug" within AMR refinement to not change bottom topography (use init cond. or smthg)
+# Now test how it looks when only wet part is refined (outer cells are at med_level from start on)
+
+# Do test runs to guarantee that e.g Kelvin-Helmholtz AMR elixir gives same solution and works with modified AMR
+#=
+amr_indicator = IndicatorHennemannGassner(semi,
+                                          alpha_max=.5,
+                                          alpha_min=0.001,
+                                          alpha_smooth=true,
+                                          variable=waterheight_pressure)                                          
+amr_controller = ControllerThreeLevel(semi, amr_indicator;
+                                      base_level=5,
+                                      med_level=5, med_threshold=0.1,
+                                      max_level=6, max_threshold=0.5)
+amr_callback = AMRCallback(semi, amr_controller,
+                           interval=1,
+                           adapt_initial_condition=true)                                      
+=#
+
 callbacks = CallbackSet(summary_callback, analysis_callback, alive_callback, save_solution)
 
 stage_limiter! = PositivityPreservingLimiterZhangShu(thresholds=(equations.threshold_limiter,),
@@ -104,6 +137,7 @@ stage_limiter! = PositivityPreservingLimiterZhangShu(thresholds=(equations.thres
 stepsize_callback = StepsizeCallback(cfl=cfl)
 
 callbacks = CallbackSet(summary_callback, analysis_callback, alive_callback, save_solution,stepsize_callback)
+#callbacks = CallbackSet(summary_callback, analysis_callback, alive_callback, save_solution,stepsize_callback, amr_callback)
 
 sol = solve(ode, SSPRK43(stage_limiter!), dt=1.0,
             save_everystep=false, callback=callbacks, adaptive=false);

@@ -9,6 +9,21 @@ equations = ShallowWaterEquations2D(gravity_constant=9.81, H0=1.4)
 
 cfl = 0.1                                    
 
+#= 
+SSPRK43 (with CFL) with following parameters:
+  - t_lim e-13
+  - t_wet e-15
+  - cfl = 0.1
+  - polydeg = 4
+  - ref lvl = 4
+  - alpha = [ 0.001 , 0.5] incl. adjusted alpha=1 in dry case
+  - x_y_min = ( -1, -1) 
+  - x_y_max = ( 1, 1)
+  - T = 10.0 ()
+
+  LGL=2, Ref=5 takes some time, but good result
+=#
+
 function initial_condition_conical_island(x, t, equations::ShallowWaterEquations2D)
   # Set the background values
   
@@ -103,3 +118,41 @@ sol = solve(ode, SSPRK43(stage_limiter!),
             dt=1.0, # solve needs some value here but it will be overwritten by the stepsize_callback
             save_everystep=false, callback=callbacks, adaptive=false);
 summary_callback() # print the timer summary
+
+
+###############################################################################
+# Code for saving solution (at LGL points) at T=0 and T=end
+#=
+using Tables, CSV
+u_loc = Trixi.wrap_array_native(sol.u[1], semi)
+u_H = u_loc[1,:,:,:] + u_loc[4,:,:,:] # return H=h+b
+u_H_new = hcat(u_H...)
+CSV.write("water_height_T=0.txt",  Tables.table(u_H_new'), writeheader=false)
+
+#print(u_H)
+
+u_loc_end = Trixi.wrap_array_native(sol.u[end], semi)
+u_H_end = u_loc_end[1,:,:,:] + u_loc_end[4,:,:,:] # return H=h+b
+u_H_new_end = hcat(u_H_end...)
+CSV.write("water_height_T=END.txt",  Tables.table(u_H_new_end'), writeheader=false)
+=#
+
+###############################################################################
+# Code for plotting the solution at T=end
+#=
+using GLMakie # use CairoMakie for non-interactive plots (i.e., saving pictures)
+
+# create triangulated plot data for Makie
+pd = Trixi.PlotData2DTriangulated(sol)
+
+# plot bathymetry
+plotting_mesh = Trixi.global_plotting_triangulation_makie(pd["b"])
+fig, ax, plt = Makie.mesh(plotting_mesh; color=getindex.(plotting_mesh.position, 3), 
+                          colormap=Trixi.default_Makie_colormap())
+
+# plot water as blue on top of the bathymetry
+plotting_mesh = Trixi.global_plotting_triangulation_makie(pd["H"])
+Makie.mesh!(ax, plotting_mesh; color=getindex.(plotting_mesh.position, 3), colormap=:blues)
+
+fig # displays the plot
+=#

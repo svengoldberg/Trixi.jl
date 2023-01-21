@@ -8,6 +8,13 @@ using Trixi
 equations = ShallowWaterEquations2D(gravity_constant=9.812)
 cfl = 1
 
+#=
+  For thesis: Do comparison and start with run without alpha_max hard coded to 1 at dry cells
+  Maybe there can even a run be build where the errors are very obvious when not using FV
+
+  Important: Mention that it is WB when wet/dry front on interface (Then, scheme coincides with FV)
+=#
+
 function initial_condition_complex_bottom_wb_CN(x, t, equations:: ShallowWaterEquations2D)
   v1 = 0
   v2 = 0

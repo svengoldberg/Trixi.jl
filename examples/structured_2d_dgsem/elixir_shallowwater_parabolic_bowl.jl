@@ -8,6 +8,18 @@ using Trixi
 equations = ShallowWaterEquations2D(gravity_constant=9.81)
 cfl = 0.6
 
+#=
+    t_lim = e-13
+    t_wet = e-15
+    cfl = 0.6
+    LGL = 5
+    cells_per_dimension = (100,100) [(120,120)]
+    T = 1.0
+    alpha in {0.001, 0.5}
+
+    Test run with LGL=6 has delT~1e-06 -> stopped
+=#
+
 # Implemented based on Wintermeyer (scaled on half of domain)
 function parabolic_bowl_analytic_2D_H(gravity, x,t)
   a = 1

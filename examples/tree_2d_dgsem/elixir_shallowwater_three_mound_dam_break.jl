@@ -14,6 +14,19 @@ cfl = 0.1
 #   Problem with boundary! Looks reasonable but boundary is not meaningful
 #
 
+#= 
+  - SSPRK43 (with CFL) with following parameters:
+  - t_lim 
+  - t_wet 
+  - cfl = 
+  - polydeg = 
+  - ref lvl = 
+  - alpha = [ 0.001 , 0.5] incl. adjusted alpha=1 in dry case
+  - x_y_min = ( -1, -1) 
+  - x_y_max = ( 1, 1)
+  - T = 
+=#
+
 function initial_condition_three_mounds(x, t, equations::ShallowWaterEquations2D)
   # Set the background values
   
@@ -33,20 +46,38 @@ function initial_condition_three_mounds(x, t, equations::ShallowWaterEquations2D
   k  = -40.0 # sharpness of transfer
   
   H = max(b, L/(1.0 + exp(-k*(x1 - x0))))
+  #H = equations.H0#max(b+threshold_init, equations.H0)
+  #=
+  # Test whether boundary condition is working
+  H = equations.H0
+  b = 1
+  =#
   H = max(H, b + equations.threshold_limiter)
   return prim2cons(SVector(H, v1, v2, b), equations)
 end
 
 initial_condition = initial_condition_three_mounds
+# In easy example (2 hills), Dirichlet boundary is wb! Go on testing on different topographies
 # Dirichlet condition crashes, slip wall condition explodes
 #boundary_condition = boundary_condition_slip_wall
 #boundary_condition = BoundaryConditionDirichlet(initial_condition)
 ###############################################################################
 # Get the DG approximation space
 
+#=
+  Deactivating every single new feature and doing an easy (constant topography) wb test gave the same oscilattions/crashes.
+  Replacing the conservative numerical flux from HLL type (tested CN and standard case) to Fjordholm gives wb
+  PROBLEM: Now, wet/dry cannot be used as Fjordholm cannot handle this
+=#
+
 volume_flux = (flux_wintermeyer_etal, flux_nonconservative_wintermeyer_etal)
+#surface_flux = (FluxHydrostaticReconstruction(flux_fjordholm_etal, hydrostatic_reconstruction_chen_noelle, threshold_wet),
+#                flux_nonconservative_fjordholm_etal)
+#flux_fjordholm_etal
 surface_flux = (FluxHydrostaticReconstruction(flux_hll_cn, hydrostatic_reconstruction_chen_noelle),
                flux_nonconservative_chen_noelle)
+#surface_flux = (flux_fjordholm_etal, flux_nonconservative_fjordholm_etal)
+#surface_flux = (flux_hll_cn, flux_nonconservative_chen_noelle)
 basis = LobattoLegendreBasis(3)
 
 indicator_sc = IndicatorHennemannGassner(equations, basis,
