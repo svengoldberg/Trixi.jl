@@ -22,6 +22,12 @@ equations = ShallowWaterEquations2D(gravity_constant=9.81, H0=100.0)
 cfl = 0.1
 
 #=
+  Currently, error-based time step is chosen
+  Tolerances have to be relatively large to not produce time steps around 1e-5
+  But nevertheless, results looks very good and high resolution (Ref5, LGL6 e.g.) is achieved
+=#
+
+#=
   New init:
     periodic: LGL=3, ref=4, T=10. => Good results!
       (Cylinder simulation works with those parameters as well)
@@ -65,7 +71,7 @@ function initial_condition_wave(x, t, equations::ShallowWaterEquations2D)
 end
 
 initial_condition = initial_condition_wave
-#boundary_condition = BoundaryConditionDirichlet(initial_condition) #boundary_condition_slip_wall
+boundary_condition = BoundaryConditionDirichlet(initial_condition)
 
 ###############################################################################
 # Get the DG approximation space
@@ -74,7 +80,8 @@ volume_flux = (flux_wintermeyer_etal, flux_nonconservative_wintermeyer_etal)
 
 surface_flux = (FluxHydrostaticReconstruction(flux_hll_cn, hydrostatic_reconstruction_chen_noelle),
                 flux_nonconservative_chen_noelle)
-basis = LobattoLegendreBasis(4)
+
+basis = LobattoLegendreBasis(6)
 
 indicator_sc = IndicatorHennemannGassner(equations, basis,
                                          alpha_max=0.6,
@@ -94,19 +101,19 @@ coordinates_min = (spline_struct.x[1], spline_struct.y[1])
 coordinates_max = (spline_struct.x[end], spline_struct.y[end])
 
 mesh = TreeMesh(coordinates_min, coordinates_max,
-                initial_refinement_level=3,
-                n_cells_max=10_000
-                #,periodicity=false
+                initial_refinement_level=5,
+                n_cells_max=10_000,
+                periodicity=false
                )
 
 # create the semi discretization object
-semi = SemidiscretizationHyperbolic(mesh, equations, initial_condition, solver
-                                   #;boundary_conditions=boundary_condition)
-                                    )
+semi = SemidiscretizationHyperbolic(mesh, equations, initial_condition, solver,
+                                   boundary_conditions=boundary_condition)
+                                   
 ###############################################################################
 # ODE solvers, callbacks etc.
 
-tspan = (0.0, 20.0)
+tspan = (0.0, 15.0)
 ode = semidiscretize(semi, tspan)
 
 ###############################################################################
@@ -126,8 +133,8 @@ save_solution = SaveSolutionCallback(interval=100,
 
 stepsize_callback = StepsizeCallback(cfl=cfl)
 
-callbacks = CallbackSet(summary_callback, analysis_callback, alive_callback, save_solution,
-                        stepsize_callback)
+callbacks = CallbackSet(summary_callback, analysis_callback, alive_callback, save_solution)#,
+                        #stepsize_callback2)
 
 ###############################################################################
 # run the simulation
@@ -136,6 +143,6 @@ stage_limiter! = PositivityPreservingLimiterZhangShu(thresholds=(equations.thres
                                                      variables=(Trixi.waterheight,))
 
 sol = solve(ode, SSPRK43(stage_limiter!),
-            dt=1.0, # solve needs some value here but it will be overwritten by the stepsize_callback
-            save_everystep=false, callback=callbacks, adaptive=false);
+            dt=1.0, abstol=1.0e-3, reltol=1.0e-3,
+            save_everystep=false, callback=callbacks);#, adaptive=false);
 summary_callback() # print the timer summary
