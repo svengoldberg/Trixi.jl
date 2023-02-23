@@ -8,7 +8,7 @@ using OrdinaryDiffEq
 using Trixi
 
 # Get root directory
-dir_path = pkgdir(Trixi)#BottomTopography)
+dir_path = pkgdir(Trixi) # Moved rhine_data_file into Trixi.jl folder
 
 # Define data path
 Rhine_data = string(dir_path, "/examples/TrixiBottomTopography/data/rhine_data_2d_20.txt")
@@ -17,30 +17,12 @@ Rhine_data = string(dir_path, "/examples/TrixiBottomTopography/data/rhine_data_2
 spline_struct = BicubicBSpline(Rhine_data)
 spline_func(x,y) = spline_interpolation(spline_struct, x, y)
 
-equations = ShallowWaterEquations2D(gravity_constant=9.81, H0=100.0)
-
-cfl = 0.1
+equations = ShallowWaterEquations2D(gravity_constant=9.81, H0=60.0)
 
 #=
   Currently, error-based time step is chosen
   Tolerances have to be relatively large to not produce time steps around 1e-5
   But nevertheless, results looks very good and high resolution (Ref5, LGL6 e.g.) is achieved
-=#
-
-#=
-  New init:
-    periodic: LGL=3, ref=4, T=10. => Good results!
-      (Cylinder simulation works with those parameters as well)
-  New init (cylinder):
-    periodic: LGL=4, ref=3, aplha_max=0.6, T=20. => Good results!
-              LGL=4, ref=5, aplha_max=0.6, T=20. => Good results! (RUNTIME!)
-=#
-
-#=
-  Do some testing how the impact of the threshold in indicators_2d.jl is 
-  old value: 1e-8 produced more 'crashes' [delT < 1e-6]) than large value (this run tested with 1e-4)
-    => New th_indicator: Cylinder init runs with LGL=RefLvl=4, alpha_max=.6, T=20
-  Dirichlet works with some parameters (use lower T (maybe 8)-> runtime! As water flows out of domain, not much happens)
 =#
 
 function initial_condition_wave(x, t, equations::ShallowWaterEquations2D)
@@ -133,8 +115,7 @@ save_solution = SaveSolutionCallback(interval=100,
 
 stepsize_callback = StepsizeCallback(cfl=cfl)
 
-callbacks = CallbackSet(summary_callback, analysis_callback, alive_callback, save_solution)#,
-                        #stepsize_callback2)
+callbacks = CallbackSet(summary_callback, analysis_callback, alive_callback, save_solution)
 
 ###############################################################################
 # run the simulation
@@ -144,5 +125,5 @@ stage_limiter! = PositivityPreservingLimiterZhangShu(thresholds=(equations.thres
 
 sol = solve(ode, SSPRK43(stage_limiter!),
             dt=1.0, abstol=1.0e-3, reltol=1.0e-3,
-            save_everystep=false, callback=callbacks);#, adaptive=false);
+            save_everystep=false, callback=callbacks);
 summary_callback() # print the timer summary
