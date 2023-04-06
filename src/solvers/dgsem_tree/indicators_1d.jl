@@ -25,6 +25,7 @@ end
 
 # Overload indicator when ShallowWaterEquations1D is used to apply full FV method on cells 
 #   containing dry LGL nodes
+#=
 function (indicator_hg::IndicatorHennemannGassner)(u, mesh::Union{TreeMesh{1}, StructuredMesh{1}},
                                                    equations::ShallowWaterEquations1D, dg::DGSEM, 
                                                    cache; kwargs...)
@@ -116,6 +117,7 @@ function (indicator_hg::IndicatorHennemannGassner)(u, mesh::Union{TreeMesh{1}, S
   return alpha
 end
 
+=#
 function (indicator_hg::IndicatorHennemannGassner)(u, mesh::Union{TreeMesh{1}, StructuredMesh{1}},
                                                    equations, dg::DGSEM, cache;
                                                    kwargs...)
