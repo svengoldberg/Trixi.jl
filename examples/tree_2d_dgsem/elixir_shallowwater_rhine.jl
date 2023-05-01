@@ -60,7 +60,7 @@ boundary_condition = BoundaryConditionDirichlet(initial_condition)
 
 volume_flux = (flux_wintermeyer_etal, flux_nonconservative_wintermeyer_etal)
 
-surface_flux = (FluxHydrostaticReconstruction(flux_hll_cn, hydrostatic_reconstruction_chen_noelle),
+surface_flux = (FluxHydrostaticReconstruction(flux_hll_chen_noelle, hydrostatic_reconstruction_chen_noelle),
                 flux_nonconservative_chen_noelle)
 
 basis = LobattoLegendreBasis(6)
@@ -113,15 +113,13 @@ save_solution = SaveSolutionCallback(interval=100,
                                      save_initial_solution=true,
                                      save_final_solution=true)
 
-stepsize_callback = StepsizeCallback(cfl=cfl)
-
 callbacks = CallbackSet(summary_callback, analysis_callback, alive_callback, save_solution)
 
 ###############################################################################
 # run the simulation
 
-stage_limiter! = PositivityPreservingLimiterZhangShu(thresholds=(equations.threshold_limiter,),
-                                                     variables=(Trixi.waterheight,))
+stage_limiter! = PositivityPreservingLimiterShallowWater(thresholds=(equations.threshold_limiter,),
+                                                         variables=(Trixi.waterheight,))
 
 sol = solve(ode, SSPRK43(stage_limiter!),
             dt=1.0, abstol=1.0e-3, reltol=1.0e-3,
