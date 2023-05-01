@@ -245,7 +245,7 @@ Base.show(io::IO, numflux::FluxHLL) = print(io, "FluxHLL(", numflux.min_max_spee
 See [`FluxHLL`](@ref).
 """
 const flux_hll = FluxHLL()
-const flux_hll_cn = FluxHLLChenNoelle()
+const flux_hll_chen_noelle = FluxHLLChenNoelle()
 
 
 """
@@ -307,27 +307,12 @@ end
 
 @inline function (numflux::FluxHydrostaticReconstruction)(u_ll, u_rr,
                                                           orientation_or_normal_direction,
-                                                          equations::AbstractEquations{2})
+                                                          equations::AbstractEquations)
   @unpack numerical_flux, hydrostatic_reconstruction = numflux
 
   # Create the reconstructed left/right solution states in conservative form
   u_ll_star, u_rr_star = hydrostatic_reconstruction(u_ll, u_rr, equations)
 
-  threshold = equations.threshold_wet
-
-  if threshold > 0
-    h_ll, _, _, b_ll = u_ll_star
-    h_rr, _, _, b_rr = u_rr_star
-
-    # Implement threshold to cut off the height and the velocity
-    if h_ll <= threshold
-      u_ll_star = SVector(threshold, 0, 0, b_ll)
-    end
-
-    if h_rr <= threshold
-      u_rr_star = SVector(threshold, 0, 0, b_rr)
-    end
-  end
   # Use the reconstructed states to compute the numerical surface flux
   return numerical_flux(u_ll_star, u_rr_star, orientation_or_normal_direction, equations)
 end

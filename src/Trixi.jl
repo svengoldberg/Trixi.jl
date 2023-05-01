@@ -157,18 +157,18 @@ export AcousticPerturbationEquations2D,
        LinearizedEulerEquations2D
 
 export LaplaceDiffusion2D,
-       CompressibleNavierStokesDiffusion2D
+       CompressibleNavierStokesDiffusion2D, CompressibleNavierStokesDiffusion3D
 
 export GradientVariablesPrimitive, GradientVariablesEntropy
 
-export flux, flux_central, flux_lax_friedrichs, flux_hll, flux_hll_cn, flux_hllc, flux_hlle, flux_godunov,
+export flux, flux_central, flux_lax_friedrichs, flux_hll, flux_hllc, flux_hlle, flux_godunov,
        flux_chandrashekar, flux_ranocha, flux_derigs_etal, flux_hindenlang_gassner,
        flux_nonconservative_powell,
        flux_kennedy_gruber, flux_shima_etal, flux_ec,
        flux_fjordholm_etal, flux_nonconservative_fjordholm_etal,
        flux_wintermeyer_etal, flux_nonconservative_wintermeyer_etal,
        hydrostatic_reconstruction_audusse_etal, flux_nonconservative_audusse_etal,
-       hydrostatic_reconstruction_chen_noelle, flux_nonconservative_chen_noelle,
+       hydrostatic_reconstruction_chen_noelle, flux_nonconservative_chen_noelle, flux_hll_chen_noelle,
        FluxPlusDissipation, DissipationGlobalLaxFriedrichs, DissipationLocalLaxFriedrichs,
        FluxLaxFriedrichs, max_abs_speed_naive,
        FluxHLL, min_max_speed_naive,
@@ -204,7 +204,8 @@ export initial_condition_eoc_test_coupled_euler_gravity, source_terms_eoc_test_c
 export cons2cons, cons2prim, prim2cons, cons2macroscopic, cons2state, cons2mean,
        cons2entropy, entropy2cons
 export density, pressure, density_pressure, velocity, global_mean_vars, equilibrium_distribution, waterheight_pressure
-export entropy, energy_total, energy_kinetic, energy_internal, energy_magnetic, cross_helicity
+export entropy, energy_total, energy_kinetic, energy_internal, energy_magnetic, cross_helicity,
+       enstrophy
 export lake_at_rest_error
 export ncomponents, eachcomponent
 
@@ -247,7 +248,7 @@ export ControllerThreeLevel, ControllerThreeLevelCombined,
        IndicatorLöhner, IndicatorLoehner, IndicatorMax,
        IndicatorNeuralNetwork, NeuralNetworkPerssonPeraire, NeuralNetworkRayHesthaven, NeuralNetworkCNN
 
-export PositivityPreservingLimiterZhangShu
+export PositivityPreservingLimiterZhangShu, PositivityPreservingLimiterShallowWater
 
 export trixi_include, examples_dir, get_examples, default_example,
        default_example_unstructured

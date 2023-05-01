@@ -6,7 +6,7 @@
 
 
 @doc raw"""
-    ShallowWaterEquations2D(gravity, H0)
+    ShallowWaterEquations2D(gravity, H0, threshold_limiter, threshold_wet)
 
 Shallow water equations (SWE) in two space dimensions. The equations are given by
 ```math
@@ -26,6 +26,12 @@ also defines the total water height as ``H = h + b``.
 
 The additional quantity ``H_0`` is also available to store a reference value for the total water height that
 is useful to set initial conditions or test the "lake-at-rest" well-balancedness.
+
+Also, there are two thresholds which prevent numerical problems as well as instabilities. Both of them do not
+have to be passed, as default values are defined within the struct. The first one, `threshold_limiter`, is
+used in [`PositivityPreservingLimiterShallowWater`](@ref) on the water height, as a (small) shift on the initial
+condition and cutoff before the next time step. The second one, `threshold_wet`, is applied on the water height to
+define when the flow is "wet" before calculating the numerical flux.
 
 The bottom topography function ``b(x,y)`` is set inside the initial condition routine
 for a particular problem setup. To test the conservative form of the SWE one can set the bottom topography
@@ -50,9 +56,11 @@ References for the SWE are many but a good introduction is available in Chapter 
 struct ShallowWaterEquations2D{RealT<:Real} <: AbstractShallowWaterEquations{2, 4}
   gravity::RealT # gravitational constant
   H0::RealT      # constant "lake-at-rest" total water height
-  threshold_limiter::RealT  # threshold to use in PositivityPreservingLimiterZhangShu on waterheight,
-                            # as shift on the initial condition and cutoff before the next timestep
-  threshold_wet::RealT      # threshold to be applied on waterheight before calculating numflux
+  threshold_limiter::RealT  # Threshold to use in PositivityPreservingLimiterShallowWater on water height,
+                             # as a (small) shift on the initial condition and cutoff before the 
+                             # next time step.
+   threshold_wet::RealT      # Threshold to be applied on water height to define when the flow is "wet"
+                             # before calculating the numerical flux.
 end
 
 # Allow for flexibility to set the gravitational constant within an elixir depending on the
@@ -439,6 +447,21 @@ Further details for the hydrostatic reconstruction and its motivation can be fou
   return u_ll_star, u_rr_star
 end
 
+"""
+    hydrostatic_reconstruction_chen_noelle(u_ll, u_rr, orientation::Integer,
+                                           equations::ShallowWaterEquations2D)
+
+A particular type of hydrostatic reconstruction on the water height to guarantee well-balancedness
+for a general bottom topography [`ShallowWaterEquations2D`](@ref). The reconstructed solution states
+`u_ll_star` and `u_rr_star` variables are used to evaluate the surface numerical flux at the interface.
+The key idea is a linear reconstruction of the bottom and water height at the interfaces using subcells.
+Use in combination with the generic numerical flux routine [`FluxHydrostaticReconstruction`](@ref).
+
+Further details on this hydrostatic reconstruction and its motivation can be found in
+- Guoxian Chen and Sebastian Noelle (2017) 
+  A new hydrostatic reconstruction scheme based on subcell reconstructions
+  [DOI:10.1137/15M1053074](https://dx.doi.org/10.1137/15M1053074)
+"""
 @inline function hydrostatic_reconstruction_chen_noelle(u_ll, u_rr, equations::ShallowWaterEquations2D)
   # Unpack left and right water heights and bottom topographies
   h_ll, _, _, b_ll = u_ll
@@ -454,9 +477,24 @@ end
   b_star = min( max( b_ll, b_rr ), min( H_ll, H_rr ) )
   
   # Compute the reconstructed water heights
-  h_ll_star = min( H_ll-b_star, h_ll )
-  h_rr_star = min( H_rr-b_star, h_rr )
+  h_ll_star = min( H_ll - b_star, h_ll )
+  h_rr_star = min( H_rr - b_star, h_rr )
 
+  # Set the water height to be at least the value stored in the variable threshold after
+  # the hydrostatic reconstruction is applied and before the numerical flux is calculated
+  # to avoid numerical problem with arbitrary small values. Interfaces with a water height
+  # lower or equal to the threshold can be declared as dry.
+  # The default value is set to 1e-15 and can be changed within the constructor call in an elixir.
+  threshold = equations.threshold_wet
+
+  h_ll_star = h_ll_star * Int32(h_ll_star > threshold) + threshold * Int32(h_ll_star <= threshold)
+  h_rr_star = h_rr_star * Int32(h_rr_star > threshold) + threshold * Int32(h_rr_star <= threshold)
+
+  v1_ll = v1_ll * Int32(h_ll_star > threshold)
+  v1_rr = v1_rr * Int32(h_rr_star > threshold)
+
+  v2_ll = v2_ll * Int32(h_ll_star > threshold)
+  v2_rr = v2_rr * Int32(h_rr_star > threshold)
 
   # Create the conservative variables using the reconstruted water heights
   u_ll_star = SVector( h_ll_star, h_ll_star * v1_ll, h_ll_star * v2_ll, b_ll )
@@ -548,6 +586,27 @@ end
   return SVector(f1, f2, f3, f4)
 end
 
+"""
+    flux_nonconservative_chen_noelle(u_ll, u_rr,
+                                     orientation::Integer,
+                                     equations::ShallowWaterEquations2D)
+    flux_nonconservative_chen_noelle(u_ll, u_rr,
+                                     normal_direction_ll      ::AbstractVector,
+                                     normal_direction_average ::AbstractVector,
+                                     equations::ShallowWaterEquations2D)
+
+Non-symmetric two-point surface flux that discretizes the nonconservative (source) term.
+The discretization uses the [`hydrostatic_reconstruction_chen_noelle`](@ref) on the conservative
+variables.
+
+Should be used together with [`FluxHydrostaticReconstruction`](@ref) and
+[`hydrostatic_reconstruction_chen_noelle`](@ref) in the surface flux to ensure consistency.
+
+Further details on the hydrostatic reconstruction and its motivation can be found in
+- Guoxian Chen and Sebastian Noelle (2017) 
+  A new hydrostatic reconstruction scheme based on subcell reconstructions
+  [DOI:10.1137/15M1053074](https://dx.doi.org/10.1137/15M1053074)
+"""
 @inline function flux_nonconservative_chen_noelle(u_ll, u_rr, orientation::Integer,
                                                   equations::ShallowWaterEquations2D)
   # Pull the water height and bottom topography on the left
@@ -863,6 +922,21 @@ end
   return λ_min, λ_max
 end
 
+"""
+    min_max_speed_chen_noelle(u_ll, u_rr, orientation::Integer,
+                              equations::ShallowWaterEquations2D)
+    min_max_speed_chen_noelle(u_ll, u_rr, normal_direction::AbstractVector,
+                              equations::ShallowWaterEquations2D)
+
+The approximated speeds for the HLL type numerical flux used by Chen and Noelle for their 
+hydrostatic reconstruction. As they state in the paper, those speeds are chosen for the numerical
+flux to ensure positivity and satisfy an entropy inequality.
+
+Further details on this hydrostatic reconstruction and its motivation can be found in
+- Guoxian Chen and Sebastian Noelle (2017) 
+  A new hydrostatic reconstruction scheme based on subcell reconstructions
+  [DOI:10.1137/15M1053074](https://dx.doi.org/10.1137/15M1053074)
+"""
 @inline function min_max_speed_chen_noelle(u_ll, u_rr, orientation::Integer, 
                                            equations::ShallowWaterEquations2D)
   h_ll = waterheight(u_ll, equations)
@@ -874,11 +948,11 @@ end
   a_rr = sqrt(equations.gravity * h_rr)
 
   if orientation == 1 # x-direction
-    λ_min = min( v1_ll-a_ll, v1_rr-a_rr, 0 ) 
-    λ_max = max( v1_ll+a_ll, v1_rr+a_rr, 0 )
+    λ_min = min( v1_ll - a_ll, v1_rr - a_rr, zero(eltype(u_ll)) ) 
+    λ_max = max( v1_ll + a_ll, v1_rr + a_rr, zero(eltype(u_ll)) )
   else # y-direction
-    λ_min = min( v2_ll-a_ll, v2_rr-a_rr, 0 )
-    λ_max = max( v2_ll+a_ll, v2_rr+a_rr, 0 )
+    λ_min = min( v2_ll - a_ll, v2_rr - a_rr, zero(eltype(u_ll)) )
+    λ_max = max( v2_ll + a_ll, v2_rr + a_rr, zero(eltype(u_ll)) )
   end
   return λ_min, λ_max
 end
@@ -898,8 +972,8 @@ end
   a_ll = sqrt(equations.gravity * h_ll) * norm_
   a_rr = sqrt(equations.gravity * h_rr) * norm_
 
-  λ_min = min( v_normal_ll - a_ll, v_normal_rr - a_rr, 0 ) 
-  λ_max = max( v_normal_ll + a_ll, v_normal_rr + a_rr, 0 )
+  λ_min = min( v_normal_ll - a_ll, v_normal_rr - a_rr, zero(eltype(u_ll)) ) 
+  λ_max = max( v_normal_ll + a_ll, v_normal_rr + a_rr, zero(eltype(u_ll)) )
 
   return λ_min, λ_max
 end
