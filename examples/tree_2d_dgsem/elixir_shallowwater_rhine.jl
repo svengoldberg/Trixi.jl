@@ -34,8 +34,6 @@ function initial_condition_wave(x, t, equations::ShallowWaterEquations2D)
   v2 = 0.0
 
   inicenter = SVector(31.0, 27.0)
-  x_norm = x - inicenter
-  r = norm(x_norm)
 
   # Calculate primitive variables
   # use a logistic function to tranfer water height value smoothly
