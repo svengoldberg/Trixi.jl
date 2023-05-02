@@ -7,11 +7,8 @@ using LinearAlgebra
 using OrdinaryDiffEq
 using Trixi
 
-# Get root directory
-dir_path = pkgdir(Trixi) # Moved rhine_data_file into Trixi.jl folder
-
-# Define data path
-Rhine_data = string(dir_path, "/examples/TrixiBottomTopography/data/rhine_data_2d_20.txt")
+# Download the data for B-spline interpolation of the bottom topography
+Rhine_data = download("https://gist.githubusercontent.com/svengoldberg/582f389ef69095110fc5009ab75aaa5b/raw/b774ef6b7116bda08519c0e5aba179c2c97767c9/rhine_data_2d_20")
 
 # B-spline interpolation of the underlying data
 spline_struct = BicubicBSpline(Rhine_data)
