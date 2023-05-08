@@ -5,10 +5,10 @@ using Trixi
 
 include("test_trixi.jl")
 
-# pathof(Trixi) returns /path/to/Trixi/src/Trixi.jl, dirname gives the parent directory
+# pathof(Trixi) returns /path/to/Trixi.jl/src/Trixi.jl, dirname gives the parent directory
 EXAMPLES_DIR = joinpath(pathof(Trixi) |> dirname |> dirname, "examples", "structured_2d_dgsem")
 
-# Start with a clean environment: remove Trixi output directory if it exists
+# Start with a clean environment: remove Trixi.jl output directory if it exists
 outdir = "out"
 isdir(outdir) && rm(outdir, recursive=true)
 
@@ -260,8 +260,8 @@ isdir(outdir) && rm(outdir, recursive=true)
 
   @trixi_testset "elixir_shallowwater_well_balanced_wet_dry.jl" begin
     @test_trixi_include(joinpath(EXAMPLES_DIR, "elixir_shallowwater_well_balanced_wet_dry.jl"),
-      l2   = [0.029659454053629655, 1.1553585079236288e-14, 1.2090918908201374e-14, 0.1164224011562928],
-      linf = [0.4999999999999011, 5.097044204873532e-14, 4.550091706897745e-14, 1.9999999999999991],
+      l2   = [0.019731646454946954, 6.682390396110676e-14, 1.1925157549257398e-14, 0.07715172600379547],
+      linf = [0.5000000000001029, 3.959125826488326e-13, 4.556539260222467e-14, 2.0],
       tspan = (0.0, 0.25))
   end
 
@@ -274,8 +274,8 @@ isdir(outdir) && rm(outdir, recursive=true)
 
   @trixi_testset "elixir_shallowwater_parabolic_bowl.jl" begin
     @test_trixi_include(joinpath(EXAMPLES_DIR, "elixir_shallowwater_parabolic_bowl.jl"),
-      l2   = [0.009554371585408719, 0.002275006675117367, 0.006098409438019513, 4.0426608138290764e-17],
-      linf = [0.03780630473436756, 0.008897336649446749, 0.023990826432799407, 3.3306690738754696e-16],
+      l2   = [0.00031619282211426265, 9.669085946910493e-5, 0.00021314873235172974, 8.085321627658153e-17],
+      linf = [0.005459003630129106, 0.0013183785840823426, 0.0035522108675280165, 6.661338147750939e-16],
       tspan = (0.0, 0.25), cells_per_dimension = (60, 60))
   end
 
@@ -290,7 +290,7 @@ isdir(outdir) && rm(outdir, recursive=true)
   end
 end
 
-# Clean up afterwards: delete Trixi output directory
+# Clean up afterwards: delete Trixi.jl output directory
 @test_nowarn rm(outdir, recursive=true)
 
 end # module

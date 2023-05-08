@@ -26,7 +26,7 @@ solution and integrated over the computational domain.
 See `Trixi.analyze`, `Trixi.pretty_form_utf`, `Trixi.pretty_form_ascii` for further
 information on how to create custom analysis quantities.
 
-In addition, the analysis callback records and outputs a number of quantitites that are useful for
+In addition, the analysis callback records and outputs a number of quantities that are useful for
 evaluating the computational performance, such as the total runtime, the performance index
 (time/DOF/rhs!), the time spent in garbage collection (GC), or the current memory usage (alloc'd
 memory).
@@ -98,12 +98,12 @@ function AnalysisCallback(mesh, equations::AbstractEquations, solver, cache;
                           kwargs...)
   # Decide when the callback is activated.
   # With error-based step size control, some steps can be rejected. Thus,
-  #   `integrator.iter >= integrator.destats.naccept`
+  #   `integrator.iter >= integrator.stats.naccept`
   #    (total #steps)       (#accepted steps)
   # We need to check the number of accepted steps since callbacks are not
   # activated after a rejected step.
-  condition = (u, t, integrator) -> interval > 0 && ( (integrator.destats.naccept % interval == 0 &&
-                                                       !(integrator.destats.naccept == 0 && integrator.iter > 0)) ||
+  condition = (u, t, integrator) -> interval > 0 && ( (integrator.stats.naccept % interval == 0 &&
+                                                       !(integrator.stats.naccept == 0 && integrator.iter > 0)) ||
                                                      isfinished(integrator))
 
   analyzer = SolutionAnalyzer(solver; kwargs...)
@@ -202,7 +202,7 @@ function (analysis_callback::AnalysisCallback)(integrator)
   semi = integrator.p
   mesh, equations, solver, cache = mesh_equations_solver_cache(semi)
   @unpack dt, t = integrator
-  iter = integrator.destats.naccept
+  iter = integrator.stats.naccept
 
   # Record performance measurements and compute performance index (PID)
   runtime_since_last_analysis = 1.0e-9 * (time_ns() - analysis_callback.start_time_last_analysis)
@@ -363,7 +363,7 @@ function (analysis_callback::AnalysisCallback)(io, du, u, u_ode, t, semi)
   end
 
 
-  # Conservation errror
+  # Conservation error
   if :conservation_error in analysis_errors
     @unpack initial_state_integrals = analysis_callback
     state_integrals = integrate(u_ode, semi)
@@ -548,17 +548,6 @@ end
 pretty_form_utf(quantity) = get_name(quantity)
 pretty_form_ascii(quantity) = get_name(quantity)
 
-# Overload analyze and pass the initial_condition as parameter for integrate.
-# Special case only used for lake_at_rest_error for `AbstractShallowWaterEquations`
-# With the new wet-dry mechanics, the old calculation using a constant `H0` as a reference value fails
-# For example, when a hill extends to be higher than the waterlevel.
-# New approach: Compare water height h at time T with the initial water height
-function analyze(::typeof(lake_at_rest_error), du, u, t, semi::AbstractSemidiscretization)
-  mesh, equations, solver, cache = mesh_equations_solver_cache(semi)
-  @unpack initial_condition = semi
-
-  integrate(lake_at_rest_error, u, mesh, equations, solver, cache, initial_condition, normalize=true)    
-end
 
 # Special analyze for `SemidiscretizationHyperbolicParabolic` such that
 # precomputed gradients are available. For now only implemented for the `enstrophy`

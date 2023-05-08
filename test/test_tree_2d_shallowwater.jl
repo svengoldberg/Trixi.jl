@@ -10,8 +10,8 @@ EXAMPLES_DIR = joinpath(examples_dir(), "tree_2d_dgsem")
 @testset "Shallow Water" begin
   @trixi_testset "elixir_shallowwater_ec.jl" begin
     @test_trixi_include(joinpath(EXAMPLES_DIR, "elixir_shallowwater_ec.jl"),
-      l2   = [0.9911807999456177, 0.7340358820001013, 0.7446688375175905, 0.5875351036989047],
-      linf = [2.0118414065026426, 2.9946841579032526, 2.6555844309739545, 3.0],
+      l2   = [0.991181203601035, 0.734130029040644, 0.7447696147162621, 0.5875351036989047],
+      linf = [2.0117744577945413, 2.9962317608172127, 2.6554999727293653, 3.0],
       tspan = (0.0, 0.25))
   end
 
@@ -39,8 +39,8 @@ EXAMPLES_DIR = joinpath(examples_dir(), "tree_2d_dgsem")
 
   @trixi_testset "elixir_shallowwater_well_balanced_wet_dry.jl with FluxHydrostaticReconstruction" begin
     @test_trixi_include(joinpath(EXAMPLES_DIR, "elixir_shallowwater_well_balanced_wet_dry.jl"),
-      l2   = [0.03904507146870548, 2.0953804074196604e-14, 5.139180449007378e-17, 0.1649319748280072],
-      linf = [0.49999999999989153, 4.967300398427917e-14, 4.841253465352248e-16, 1.9999999999999991],
+      l2   = [0.030186039395610056, 2.513287752536758e-14, 1.3631397744897607e-16, 0.10911781485920438],
+      linf = [0.49999999999993505, 5.5278950497971455e-14, 7.462550826772548e-16, 2.0],
       tspan = (0.0, 0.25))
   end
 
@@ -74,9 +74,9 @@ EXAMPLES_DIR = joinpath(examples_dir(), "tree_2d_dgsem")
 
   @trixi_testset "elixir_shallowwater_parabolic_bowl.jl" begin
     @test_trixi_include(joinpath(EXAMPLES_DIR, "elixir_shallowwater_parabolic_bowl.jl"),
-      l2   = [0.009551029879419562, 0.0022746779961813663, 0.006093909535093138, 3.649315951724414e-17],
-      linf = [0.037838314224258915, 0.008905881822753982, 0.02385742969303331, 2.7755575615628914e-16],
-      tspan = (0.0, 0.25), 
+      l2   = [0.0004025343845970671, 0.00012612935902146682, 0.00024957470981317847, 7.298631903448828e-17],
+      linf = [0.006161863298804658, 0.0015326964874439984, 0.00400268569085629, 5.551115123125783e-16],
+      tspan = (0.0, 0.25),
       basis = LobattoLegendreBasis(3))
   end
 end
