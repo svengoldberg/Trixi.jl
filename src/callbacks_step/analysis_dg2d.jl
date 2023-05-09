@@ -194,7 +194,6 @@ function integrate(func::Func, u,
   end
 end
 
-
 function analyze(::typeof(entropy_timederivative), du, u, t,
                  mesh::Union{TreeMesh{2}, StructuredMesh{2}, UnstructuredMesh2D, P4estMesh{2}},
                  equations, dg::DG, cache)
