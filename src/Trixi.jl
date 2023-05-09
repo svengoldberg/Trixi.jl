@@ -18,7 +18,7 @@ module Trixi
 # Include other packages that are used in Trixi.jl
 # (standard library packages first, other packages next, all of them sorted alphabetically)
 
-using LinearAlgebra: LinearAlgebra, Diagonal, diag, dot, mul!, norm, cross, normalize, I, UniformScaling, det
+using LinearAlgebra: LinearAlgebra, Diagonal, diag, dot, mul!, norm, cross, normalize, I, UniformScaling, det, diagm, Tridiagonal, SymTridiagonal
 using Printf: @printf, @sprintf, println
 using SparseArrays: AbstractSparseMatrix, AbstractSparseMatrixCSC, sparse, droptol!, rowvals, nzrange, nonzeros, spzeros
 
@@ -45,6 +45,7 @@ using LoopVectorization: LoopVectorization, @turbo, indices
 using StaticArrayInterface: static_length # used by LoopVectorization
 using MPI: MPI
 using MuladdMacro: @muladd
+using GeometryBasics: GeometryBasics
 using Octavian: Octavian, matmul!
 using Polyester: @batch # You know, the cheapest threads you can find...
 using OffsetArrays: OffsetArray, OffsetVector
@@ -123,7 +124,27 @@ include("auxiliary/special_elixirs.jl")
 # Plot recipes and conversion functions to visualize results with Plots.jl
 include("visualization/visualization.jl")
 
-# export types/functions that define the public API of Trixi.jl
+# Include two dimensional B-spline interpolation
+include("TrixiBottomTopography/2D/spline_cache_2D.jl")
+include("TrixiBottomTopography/2D/spline_methods_2D.jl")
+include("TrixiBottomTopography/2D/spline_utils_2D.jl")
+
+# Include auxiliary functions
+include("TrixiBottomTopography/auxiliary/convert.jl")
+include("TrixiBottomTopography/auxiliary/default_example.jl")
+
+# Export the functions which are used for B-spline interpolation
+export LinearBSpline, CubicBSpline
+export BilinearBSpline, BicubicBSpline
+export spline_interpolation
+
+# Export the functions which are used DGM data conversion
+export convert_dgm_1d, convert_dgm_2d
+
+# Export default example
+export TBT_default_example
+
+# export types/functions that define the public API of Trixi
 
 export AcousticPerturbationEquations2D,
        CompressibleEulerEquations1D, CompressibleEulerEquations2D, CompressibleEulerEquations3D,
@@ -258,7 +279,7 @@ function __init__()
 
   @require Makie="ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a" begin
     include("visualization/recipes_makie.jl")
-    using .Makie: Makie, GeometryBasics
+    using .Makie: Makie
     export iplot, iplot! # interactive plot
   end
 
