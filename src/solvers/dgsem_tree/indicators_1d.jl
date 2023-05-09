@@ -28,7 +28,7 @@ end
 function (indicator_hg::IndicatorHennemannGassner)(u, mesh::Union{TreeMesh{1}, StructuredMesh{1}},
                                                    equations::ShallowWaterEquations1D, dg::DGSEM, 
                                                    cache; kwargs...)
-  @unpack alpha_max, alpha_min, alpha_smooth, variable = indicator_hg
+  @unpack alpha_max, alpha_min, alpha_smooth, variable, old_SC = indicator_hg
   @unpack alpha, alpha_tmp, indicator_threaded, modal_threaded = indicator_hg.cache
   # TODO: Taal refactor, when to `resize!` stuff changed possibly by AMR?
   #       Shall we implement `resize!(semi::AbstractSemidiscretization, new_size)`
@@ -105,8 +105,13 @@ function (indicator_hg::IndicatorHennemannGassner)(u, mesh::Union{TreeMesh{1}, S
       alpha_element = one(alpha_element)
     end
 
-    # Clip the maximum amount of FV allowed or set to one depending on indicator_wet
-    alpha[element] = indicator_wet * min(alpha_max, alpha_element) - (indicator_wet-1)
+    if !old_SC
+      # Clip the maximum amount of FV allowed or set to one depending on indicator_wet
+      alpha[element] = indicator_wet * min(alpha_max, alpha_element) - (indicator_wet-1)
+    else
+      # Clip the maximum amount of FV allowed
+      alpha[element] = min(alpha_max, alpha_element)
+    end
   end
 
   if alpha_smooth

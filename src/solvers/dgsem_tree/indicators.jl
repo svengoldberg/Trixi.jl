@@ -47,6 +47,7 @@ struct IndicatorHennemannGassner{RealT<:Real, Variable, Cache} <: AbstractIndica
   alpha_smooth::Bool
   variable::Variable
   cache::Cache
+  old_SC::Bool
 end
 
 # this method is used when the indicator is constructed as for shock-capturing volume integrals
@@ -54,11 +55,12 @@ function IndicatorHennemannGassner(equations::AbstractEquations, basis;
                                    alpha_max=0.5,
                                    alpha_min=0.001,
                                    alpha_smooth=true,
-                                   variable)
+                                   variable,
+                                   old_SC=false)
   alpha_max, alpha_min = promote(alpha_max, alpha_min)
   cache = create_cache(IndicatorHennemannGassner, equations, basis)
   IndicatorHennemannGassner{typeof(alpha_max), typeof(variable), typeof(cache)}(
-    alpha_max, alpha_min, alpha_smooth, variable, cache)
+    alpha_max, alpha_min, alpha_smooth, variable, cache, old_SC)
 end
 
 # this method is used when the indicator is constructed as for AMR
